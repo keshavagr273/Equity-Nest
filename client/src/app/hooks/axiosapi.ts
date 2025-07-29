@@ -16,9 +16,14 @@ export const postData = async <T>(
 
 export const getReq = async () => {
   try {
+    console.log('🚀 getReq: Making validation request...');
+    console.log('🚀 getReq: Cookies:', document.cookie);
+    
     const req = await api.get('/validate');
+    console.log('🚀 getReq: Response:', req.data);
     return req.data;
   } catch (error: any) {
+    console.log('🚀 getReq: Error:', error?.response?.data);
     return { error: error?.response?.data };
   }
 };

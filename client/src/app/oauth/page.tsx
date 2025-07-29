@@ -7,6 +7,8 @@ import Loader from '../components/Loader';
 import { oauthLogin } from '@/lib/redux/slices/authSlice';
 
 function GoogleOAuth() {
+  console.log('🚀 OAuth component rendered');
+  
   const [token, setToken] = useState<string | null>(null);
   const router = useRouter();
   const dispatch: any = useDispatch();
