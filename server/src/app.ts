@@ -18,8 +18,20 @@ const whiteList = [
 ].filter((origin): origin is string => Boolean(origin)); // Type guard to ensure only strings
 
 const corsOption = {
-  origin: whiteList,
+  origin: function (origin: string | undefined, callback: any) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (whiteList.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('🚀 CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 };
 
 app.use(cors(corsOption));

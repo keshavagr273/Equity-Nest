@@ -164,10 +164,12 @@ export const signup = [
 
 // Handle User Logout
 export const logout = (req: Request, res: Response) => {
+  // Clear cookie without domain specification to avoid cross-origin issues
   res.clearCookie('jwtoken', {
-    domain: process.env.CLIENT_DOMAIN_NAME,
+    path: '/',
     secure: true,
     sameSite: 'none',
+    httpOnly: true,
   });
 
   return res

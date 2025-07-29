@@ -78,6 +78,7 @@ const createAndSendToken = (user: any, res: Response) => {
       path: '/',
       sameSite: 'none',
       secure: true,
+      domain: process.env.COOKIE_DOMAIN || undefined, // Add domain for cross-origin
     });
     return res.redirect(process.env.CLIENT_DOMAIN as string);
   } else {
