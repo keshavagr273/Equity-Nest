@@ -71,16 +71,6 @@ const createAndSendToken = (user: any, res: Response) => {
   console.log('🚀 NODE_ENV:', process.env.NODE_ENV);
   console.log('🚀 CLIENT_DOMAIN:', process.env.CLIENT_DOMAIN);
 
-  // Set cookie on backend for cross-origin requests
-  res.cookie('jwtoken', accessToken, {
-    maxAge: 43200000, // 12 hr
-    httpOnly: false, // Allow frontend to access
-    path: '/',
-    sameSite: 'none',
-    secure: true,
-    domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : undefined,
-  });
-
   // Always redirect to OAuth page with token in URL for frontend to handle
   const redirectUrl = `${process.env.CLIENT_DOMAIN}/oauth?token=${accessToken}`;
   console.log('🚀 Redirecting to:', redirectUrl);

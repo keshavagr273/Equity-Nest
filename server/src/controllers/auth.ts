@@ -174,14 +174,8 @@ export const signup = [
 
 // Handle User Logout
 export const logout = (req: Request, res: Response) => {
-  // Clear cookie without domain specification to avoid cross-origin issues
-  res.clearCookie('jwtoken', {
-    path: '/',
-    secure: true,
-    sameSite: 'none',
-    httpOnly: true,
-  });
-
+  console.log('🚀 Logout: User logged out successfully');
+  
   return res
     .status(200)
     .json({ isSignedIn: false, message: 'sign out successfully' });

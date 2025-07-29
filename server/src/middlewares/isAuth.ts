@@ -19,9 +19,22 @@ const isAuthenticate = async (
   res: Response,
   next: NextFunction
 ) => {
-  const token = req.cookies.jwtoken;
+  // Try to get token from Authorization header first, then from cookies
+  const authHeader = req.headers.authorization;
+  const cookieToken = req.cookies.jwtoken;
+  
+  let token = null;
+  
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    console.log('🚀 isAuth: Token from Authorization header');
+  } else if (cookieToken) {
+    token = cookieToken;
+    console.log('🚀 isAuth: Token from cookie');
+  }
 
   console.log('🚀 isAuth: Starting authentication check...');
+  console.log('🚀 isAuth: Authorization header:', authHeader);
   console.log('🚀 isAuth: Cookies received:', req.cookies);
   console.log('🚀 isAuth: Token found:', token ? 'Yes' : 'No');
   if (token) {

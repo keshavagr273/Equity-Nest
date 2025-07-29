@@ -64,6 +64,11 @@ const Navbar: FC = () => {
       console.log('🚀 Logging out...');
       const resLogout = await logout('');
       console.log('🚀 Logout response:', resLogout);
+      
+      // Clear token from localStorage
+      localStorage.removeItem('jwt');
+      console.log('🚀 Token removed from localStorage');
+      
       dispatch(signout({ isSignedIn: false }));
       console.log('🚀 Logout successful');
       router.push('/'); // Redirect to home page after successful logout

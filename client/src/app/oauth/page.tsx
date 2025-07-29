@@ -34,11 +34,14 @@ function GoogleOAuth() {
 
   useEffect(() => {
     if (token) {
-      console.log('🚀 Setting cookie and redirecting...');
+      console.log('🚀 Setting token in localStorage and redirecting...');
       console.log('🚀 Token received:', token ? 'Yes' : 'No');
       
-      // Backend already set the cookie, just dispatch the Redux action
-      console.log('🚀 Cookie should be set by backend, dispatching oauthLogin...');
+      // Store token in localStorage for cross-origin requests
+      localStorage.setItem('jwt', token);
+      console.log('🚀 Token stored in localStorage');
+      
+      console.log('🚀 Dispatching oauthLogin...');
       console.log('🚀 Dispatching with token:', token.substring(0, 20) + '...');
       
       try {
