@@ -11,7 +11,7 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Equity Nest - Real-time Stock Trading Platform',
   description: 'A comprehensive stock trading platform with real-time data, charts, and portfolio management.',
-  authors: 'Keshav Agrawal',
+  authors: [{ name: 'Keshav Agrawal' }], 
   keywords: ['stock trading', 'real-time data', 'portfolio management', 'trading platform'],
   openGraph: {
     title: 'Equity Nest - Real-time Stock Trading Platform',
@@ -19,6 +19,7 @@ export const metadata: Metadata = {
     type: 'website',
   },
 };
+
 
 export default function RootLayout({
   children,
