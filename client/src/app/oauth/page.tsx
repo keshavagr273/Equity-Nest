@@ -37,18 +37,8 @@ function GoogleOAuth() {
       console.log('🚀 Setting cookie and redirecting...');
       console.log('🚀 Token received:', token ? 'Yes' : 'No');
       
-      // Set cookie with proper domain settings for deployment
-      const cookieOptions = {
-        maxAge: 36000,
-        path: '/',
-        secure: true,
-        sameSite: 'none' as const,
-      };
-      
-      // Set cookie without domain specification to let browser handle it
-      document.cookie = `jwtoken=${token}; max-age=${cookieOptions.maxAge}; path=${cookieOptions.path}; secure=${cookieOptions.secure}; samesite=${cookieOptions.sameSite}`;
-      
-      console.log('🚀 Cookie set, dispatching oauthLogin...');
+      // Backend already set the cookie, just dispatch the Redux action
+      console.log('🚀 Cookie should be set by backend, dispatching oauthLogin...');
       console.log('🚀 Dispatching with token:', token.substring(0, 20) + '...');
       
       try {

@@ -65,4 +65,10 @@ app.use(cookieParser());
 
 app.use('/api', useRoutes);
 
+// Test endpoint to verify server is working
+app.get('/test', (req, res) => {
+  console.log('🚀 Test endpoint hit');
+  res.json({ message: 'Server is working', timestamp: new Date().toISOString() });
+});
+
 export default app;
