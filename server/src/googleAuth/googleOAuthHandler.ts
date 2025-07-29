@@ -71,19 +71,8 @@ const createAndSendToken = (user: any, res: Response) => {
   console.log('🚀 NODE_ENV:', process.env.NODE_ENV);
   console.log('🚀 CLIENT_DOMAIN:', process.env.CLIENT_DOMAIN);
 
-  if (process.env.NODE_ENV === 'production') {
-    res.cookie('jwtoken', accessToken, {
-      maxAge: 43200000, // 12 hr
-      httpOnly: true,
-      path: '/',
-      sameSite: 'none',
-      secure: true,
-      domain: process.env.COOKIE_DOMAIN || undefined, // Add domain for cross-origin
-    });
-    return res.redirect(process.env.CLIENT_DOMAIN as string);
-  } else {
-    const redirectUrl = `${process.env.CLIENT_DOMAIN}/oauth?token=${accessToken}`;
-    console.log('🚀 Redirecting to:', redirectUrl);
-    return res.redirect(redirectUrl);
-  }
+  // Always redirect to OAuth page with token in URL for frontend to handle
+  const redirectUrl = `${process.env.CLIENT_DOMAIN}/oauth?token=${accessToken}`;
+  console.log('🚀 Redirecting to:', redirectUrl);
+  return res.redirect(redirectUrl);
 };
