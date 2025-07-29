@@ -174,8 +174,6 @@ export const signup = [
 
 // Handle User Logout
 export const logout = (req: Request, res: Response) => {
-  console.log('🚀 Logout: User logged out successfully');
-  
   return res
     .status(200)
     .json({ isSignedIn: false, message: 'sign out successfully' });

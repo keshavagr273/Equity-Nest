@@ -7,31 +7,21 @@ import { getGoogleOAuthToken } from './googleOAuth';
 
 export const googleOAuthHandler = async (req: Request, res: Response) => {
   try {
-    console.log('🚀 Google OAuth Handler Started');
     const code = req.query.code;
-    console.log('🚀 Code received:', code ? 'Yes' : 'No');
 
     if (typeof code !== 'string') {
-      console.log('❌ Invalid or missing code');
       return res.status(400).send('Invalid or missing code');
     }
 
-    console.log('🚀 Getting Google OAuth Token...');
     const { id_token, access_token } = await getGoogleOAuthToken({ code });
-    console.log('🚀 Tokens received:', id_token ? 'Yes' : 'No', access_token ? 'Yes' : 'No');
-
-    console.log('🚀 Getting Google User...');
     const googleUser: any = await getGoogleUser({ id_token, access_token });
-    console.log('🚀 Google User:', googleUser.email);
 
     let user: any = await User.findOne({ email: googleUser.email });
-    console.log('🚀 User found in DB:', user ? 'Yes' : 'No');
 
     // if no user then save user to db
     if (!user) {
       // Temporarily comment out email verification for testing
       // if (!googleUser.verified_email) {
-      //   console.log('❌ Google account not verified');
       //   return res.status(403).send('Google account is not verified');
       // }
 
@@ -46,13 +36,11 @@ export const googleOAuthHandler = async (req: Request, res: Response) => {
       });
 
       await user.save();
-      console.log('🚀 New user created');
     }
 
-    console.log('🚀 Creating and sending token...');
     createAndSendToken(user, res);
   } catch (error) {
-    console.log('❌ Google OAuth Error:', error);
+    console.error('Google OAuth Error:', error);
     return res.redirect(`${process.env.CLIENT_DOMAIN}/login`);
   }
 };
@@ -67,12 +55,7 @@ const createAndSendToken = (user: any, res: Response) => {
     }
   );
 
-  console.log('🚀 Token created, redirecting...');
-  console.log('🚀 NODE_ENV:', process.env.NODE_ENV);
-  console.log('🚀 CLIENT_DOMAIN:', process.env.CLIENT_DOMAIN);
-
   // Always redirect to OAuth page with token in URL for frontend to handle
   const redirectUrl = `${process.env.CLIENT_DOMAIN}/oauth?token=${accessToken}`;
-  console.log('🚀 Redirecting to:', redirectUrl);
   return res.redirect(redirectUrl);
 };
