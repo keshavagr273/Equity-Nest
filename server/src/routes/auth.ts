@@ -12,6 +12,13 @@ import { googleOAuthHandler } from '../googleAuth/googleOAuthHandler';
 
 const router = Router();
 
+// Debug middleware to log all auth requests
+router.use((req, res, next) => {
+  console.log('🚀 Auth Route:', req.method, req.path);
+  console.log('🚀 Auth Route Headers:', req.headers);
+  next();
+});
+
 router.get('/validate', isAuthenticate, validateLogin);
 
 router.get('/oauth/google', googleOAuthHandler);

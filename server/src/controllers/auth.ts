@@ -29,21 +29,26 @@ interface User extends Request {
 // First time user validation (to check user Signined/loggedIn or not)
 export const validateLogin = async (req: User, res: Response) => {
   try {
-    console.log('🚀 ValidateLogin: Checking authentication...');
+    console.log('🚀 ValidateLogin: Starting validation...');
     console.log('🚀 ValidateLogin: Cookies:', req.cookies);
     console.log('🚀 ValidateLogin: User:', req.user);
+    console.log('🚀 ValidateLogin: Headers:', req.headers);
     
     if (req.user) {
       console.log('🚀 ValidateLogin: User is authenticated');
+      const response = { isSignedIn: true, message: 'User is logged in.' };
+      console.log('🚀 ValidateLogin: Sending response:', response);
       return res
         .status(200)
-        .json({ isSignedIn: true, message: 'User is logged in.' });
+        .json(response);
     } else {
       console.log('🚀 ValidateLogin: No user found');
-      return res.status(401).json({
+      const response = {
         isSignedIn: false,
         message: 'Unauthorized, please login',
-      });
+      };
+      console.log('🚀 ValidateLogin: Sending response:', response);
+      return res.status(401).json(response);
     }
   } catch (error) {
     console.log('🚀 ValidateLogin error:', error);

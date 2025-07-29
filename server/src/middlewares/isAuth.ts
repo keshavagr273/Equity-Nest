@@ -21,9 +21,16 @@ const isAuthenticate = async (
 ) => {
   const token = req.cookies.jwtoken;
 
-  customLogger('🚀 token:' + (token ? 'token available' : 'No Token'));
+  console.log('🚀 isAuth: Starting authentication check...');
+  console.log('🚀 isAuth: Cookies received:', req.cookies);
+  console.log('🚀 isAuth: Token found:', token ? 'Yes' : 'No');
+  if (token) {
+    console.log('🚀 isAuth: Token length:', token.length);
+    console.log('🚀 isAuth: Token preview:', token.substring(0, 50) + '...');
+  }
 
   if (!token) {
+    console.log('🚀 isAuth: No token found');
     if (process.env.NODE_ENV === 'production') {
       return res.end();
     }
@@ -31,25 +38,29 @@ const isAuthenticate = async (
   }
 
   if (!PRIVATE_KEY) {
-    customLogger('🚀 PRIVATE_KEY is not set.');
+    console.log('🚀 isAuth: PRIVATE_KEY is not set.');
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 
   try {
+    console.log('🚀 isAuth: Verifying token...');
     const decoded = jwt.verify(token, PRIVATE_KEY);
+    console.log('🚀 isAuth: Token verified successfully');
+    console.log('🚀 isAuth: Decoded user:', decoded);
+    
     req.token = token;
     req.user = decoded;
     next();
   } catch (error) {
+    console.log('🚀 isAuth: Token verification failed');
     if (error instanceof jwt.TokenExpiredError) {
-      console.log('JWT Token Expired');
+      console.log('🚀 isAuth: JWT Token Expired');
       return res
         .status(401)
         .json({ name: 'TokenExpiredError', message: 'jwt expired' });
     }
 
-    customLogger('🚀 isAuth catch.error: ' + error);
-
+    console.log('🚀 isAuth: Error details:', error);
     res.status(401).json({
       message: 'Unauthorized: token invalid',
     });

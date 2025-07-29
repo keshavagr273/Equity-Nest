@@ -9,6 +9,14 @@ const app = express();
 app.use(helmet());
 app.disable('x-powered-by');
 
+// Debug middleware to log all requests
+app.use((req, res, next) => {
+  console.log('🚀 App Request:', req.method, req.path);
+  console.log('🚀 App Request URL:', req.url);
+  console.log('🚀 App Request Base URL:', req.baseUrl);
+  next();
+});
+
 const whiteList = [
   'http://localhost:3000',
   'https://equity-nest.vercel.app',
