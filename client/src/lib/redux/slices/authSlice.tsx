@@ -6,6 +6,10 @@ type UserDataType = {
   password: string;
 };
 
+type OAuthDataType = {
+  token: string;
+};
+
 // Login User
 export const userLogin = createAsyncThunk(
   'auth/signin',
@@ -20,6 +24,19 @@ export const userLogin = createAsyncThunk(
     } catch (error: any) {
       // console.log('🚀 userLogin ~ error:', error.response?.data.message);
       throw new Error(error.response?.data.message);
+    }
+  }
+);
+
+// OAuth Login User
+export const oauthLogin = createAsyncThunk(
+  'auth/oauth',
+  async (oauthData: OAuthDataType) => {
+    try {
+      // For OAuth, we just need to set the token and mark as signed in
+      return { isSignedIn: true, token: oauthData.token };
+    } catch (error: any) {
+      throw new Error('OAuth login failed');
     }
   }
 );
@@ -67,6 +84,20 @@ const authSlice = createSlice({
     });
 
     builder.addCase(userLogin.rejected, (state) => {
+      state.status = 'failed';
+    });
+
+    // oauthLogin reducers
+    builder.addCase(oauthLogin.pending, (state) => {
+      state.status = 'loading';
+    });
+
+    builder.addCase(oauthLogin.fulfilled, (state, { payload }) => {
+      state.status = 'idle';
+      state.isSignedIn = payload?.isSignedIn;
+    });
+
+    builder.addCase(oauthLogin.rejected, (state) => {
       state.status = 'failed';
     });
   },

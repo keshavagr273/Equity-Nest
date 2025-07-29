@@ -13,8 +13,6 @@ const whiteList = [
   'http://localhost:3000',
   'https://equity-nest.vercel.app',
   'https://equitynest.vercel.app',
-  'https://equity-nest.netlify.app',
-  'https://equitynest.netlify.app',
   process.env.CLIENT_DOMAIN, // Dynamic client domain
 ].filter((origin): origin is string => Boolean(origin)); // Type guard to ensure only strings
 

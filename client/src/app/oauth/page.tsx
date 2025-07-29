@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 
 import Loader from '../components/Loader';
-import { userLogin } from '@/lib/redux/slices/authSlice';
+import { oauthLogin } from '@/lib/redux/slices/authSlice';
 
 function GoogleOAuth() {
   const [token, setToken] = useState<string | null>(null);
@@ -27,7 +27,7 @@ function GoogleOAuth() {
     if (token) {
       console.log('🚀 Setting cookie and redirecting...');
       document.cookie = `jwtoken=${token}; max-age=36000; path=/`;
-      dispatch(userLogin({ token }));
+      dispatch(oauthLogin({ token }));
       router.push('/');
     } else {
       console.log('🚀 No token found, redirecting to login...');
