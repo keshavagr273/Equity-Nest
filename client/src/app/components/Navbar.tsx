@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, FC } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   AppBar,
   Box,
@@ -25,6 +25,7 @@ const Navbar: FC = () => {
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
   const pathname = usePathname();
+  const router = useRouter();
   const dispatch = useDispatch();
 
   const { isSignedIn } = useSelector((state: any) => state.auth);
@@ -55,13 +56,20 @@ const Navbar: FC = () => {
 
   const handleCloseUserMenu = () => {
     setAnchorElUser(null);
-    userLogout();
   };
 
   // Handle user logout
   const userLogout = async () => {
-    const resLogout = await logout('');
-    dispatch(signout(resLogout));
+    try {
+      console.log('🚀 Logging out...');
+      const resLogout = await logout('');
+      console.log('🚀 Logout response:', resLogout);
+      dispatch(signout({ isSignedIn: false }));
+      console.log('🚀 Logout successful');
+      router.push('/'); // Redirect to home page after successful logout
+    } catch (error) {
+      console.error('🚀 Logout error:', error);
+    }
   };
 
   return (
@@ -164,7 +172,10 @@ const Navbar: FC = () => {
                     onClose={handleCloseUserMenu}
                   >
                     {settings.map((setting) => (
-                      <MenuItem key={setting} onClick={handleCloseUserMenu}>
+                      <MenuItem 
+                        key={setting} 
+                        onClick={setting === 'Sign out' ? userLogout : handleCloseUserMenu}
+                      >
                         <Typography textAlign='center'>{setting}</Typography>
                       </MenuItem>
                     ))}
