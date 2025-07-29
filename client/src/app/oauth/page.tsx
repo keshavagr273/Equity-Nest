@@ -14,6 +14,7 @@ function GoogleOAuth() {
   useEffect(() => {
     console.log('🚀 OAuth page loaded');
     console.log('🚀 Current URL:', window.location.href);
+    console.log('🚀 Backend URL:', process.env.NEXT_PUBLIC_BACKEND_URL);
     
     const token: string | null = new URLSearchParams(
       window.location.search
@@ -26,8 +27,20 @@ function GoogleOAuth() {
   useEffect(() => {
     if (token) {
       console.log('🚀 Setting cookie and redirecting...');
-      document.cookie = `jwtoken=${token}; max-age=36000; path=/`;
+      // Set cookie with proper domain settings for deployment
+      const cookieOptions = {
+        maxAge: 36000,
+        path: '/',
+        secure: true,
+        sameSite: 'none' as const,
+      };
+      
+      document.cookie = `jwtoken=${token}; max-age=${cookieOptions.maxAge}; path=${cookieOptions.path}; secure=${cookieOptions.secure}; samesite=${cookieOptions.sameSite}`;
+      
+      console.log('🚀 Cookie set, dispatching oauthLogin...');
       dispatch(oauthLogin({ token }));
+      
+      console.log('🚀 Redirecting to home...');
       router.push('/');
     } else {
       console.log('🚀 No token found, redirecting to login...');

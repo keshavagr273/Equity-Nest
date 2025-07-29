@@ -30,7 +30,12 @@ const WithAuth = (
     const dispatch = useDispatch<any>();
 
     useEffect(() => {
+      console.log('🚀 WithAuth: Checking authentication...');
+      console.log('🚀 WithAuth: Current isSignedIn:', isSignedIn);
+      console.log('🚀 WithAuth: Current status:', status);
+      
       getReq().then((data) => {
+        console.log('🚀 WithAuth: Validation response:', data);
         dispatch(validateUser(data));
         setLoading(false);
       });
