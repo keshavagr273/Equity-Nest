@@ -9,15 +9,15 @@ GET http://localhost:5000/api/stockdata/AAPL
 
 ###
 GET http://localhost:5000/intraday/TATACHEM
-Cookie: jwtoken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2NTEzMTY1NmQ1YmIyZmRlOGI4OGE4NTIiLCJlbWFpbCI6Imlkb250a25vdzAxMTAxMkBnbWFpbC5jb20iLCJpYXQiOjE2OTY0OTEzMTQsImV4cCI6MTY5NjUzNDUxNH0.i_bjw3Ma1yBDygDSZVq_tm5ykxgKYQHeZhwirc63smI
+Cookie: jwtoken=<your-jwt-token>
 
 ### login user
 POST http://localhost:5000/login
 Content-Type: application/json
 
 {
-    "email": "hello@hello.com",
-    "password": "1 2 3 4 5 6"
+    "email": "<your-email>",
+    "password": "<your-password>"
 }
 
 ### signup user
@@ -26,10 +26,10 @@ Content-Type: application/json
 
 {
     "firstName": "John Doe",
-    "lastName": "hello@hello.com",
-    "email": "hello@hello.com",
-    "password": "1 2 3 4 5 6",
-    "confirmPassword": "1 2 3 4 5 6"
+    "lastName": "<your-email>",
+    "email": "<your-email>",
+    "password": "<your-password>",
+    "confirmPassword": "<your-password>"
 }
 
 ### Find a particular user with id
@@ -40,8 +40,8 @@ POST http://localhost:5000/api/signin
 Content-Type: application/json
 
 {
-    "email": "b@a.com",
-    "password": "ab1111111111cd"
+    "email": "<your-email>",
+    "password": "<your-password>"
 }
 
 ### Delete a user given id 
@@ -52,6 +52,6 @@ PATCH http://localhost:3000/auth/222
 Content-Type: application/json
 
 {
-    "email": "b@a.com",
-    "password": "abcd"
+    "email": "<your-email>",
+    "password": "<your-password>"
 }

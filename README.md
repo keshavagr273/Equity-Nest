@@ -1,6 +1,6 @@
 # Equity Nest - Real-time Stock Trading Platform
 
-A comprehensive stock trading platform built with Next.js, Express.js, and MongoDB. Features real-time stock data, interactive charts, portfolio management, and Google OAuth authentication.
+A comprehensive stock trading platform built with Next.js, Express.js, and MongoDB, powered by the Upstox API for market and historical data. Features real-time stock data, interactive charts, portfolio management, and Google OAuth authentication.
 
 ## 🚀 Features
 
@@ -10,6 +10,7 @@ A comprehensive stock trading platform built with Next.js, Express.js, and Mongo
 - **Google OAuth**: Secure authentication with Google
 - **Responsive Design**: Works on desktop and mobile devices
 - **Real-time Updates**: WebSocket integration for live data
+- **Upstox API Integration**: Live intraday and historical NSE data via Upstox
 
 ## 🛠️ Tech Stack
 
@@ -26,6 +27,7 @@ A comprehensive stock trading platform built with Next.js, Express.js, and Mongo
 - **Socket.io** - Real-time bidirectional communication
 - **JWT** - Authentication tokens
 - **Google OAuth** - Third-party authentication
+- **Upstox JS SDK** - Market and historical data (Upstox API)
 
 ## 📦 Installation
 
