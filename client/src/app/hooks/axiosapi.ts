@@ -24,6 +24,10 @@ export const getReq = async () => {
     return req.data;
   } catch (error: any) {
     console.log('🚀 getReq: Error:', error?.response?.data);
+    // If it's a 401, that's expected for unauthenticated users - return the data
+    if (error?.response?.status === 401 && error?.response?.data) {
+      return error.response.data;
+    }
     return { error: error?.response?.data };
   }
 };

@@ -1,9 +1,11 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import { randomBytes } from 'crypto';
 
 import User from '../models/userSchema';
 import { getGoogleUser } from './googleOAuth';
 import { getGoogleOAuthToken } from './googleOAuth';
+import { SessionReliabilityTracker } from '../util/sessionMetrics';
 
 export const googleOAuthHandler = async (req: Request, res: Response) => {
   try {
@@ -38,7 +40,7 @@ export const googleOAuthHandler = async (req: Request, res: Response) => {
       await user.save();
     }
 
-    createAndSendToken(user, res);
+    createAndSendToken(user, res, req);
   } catch (error) {
     console.error('Google OAuth Error:', error);
     return res.redirect(`${process.env.CLIENT_DOMAIN}/login`);
@@ -46,13 +48,24 @@ export const googleOAuthHandler = async (req: Request, res: Response) => {
 };
 
 // Create JWT TOKEN
-const createAndSendToken = (user: any, res: Response) => {
+const createAndSendToken = async (user: any, res: Response, req: Request) => {
+  const sessionId = randomBytes(16).toString('hex');
   const accessToken = jwt.sign(
-    { _id: user._id, username: user.email },
+    { _id: user._id, username: user.email, sessionId },
     process.env.PRIVATE_KEY as string,
     {
       expiresIn: '12h',
     }
+  );
+
+  // Track session start
+  const tokenExpiration = new Date(Date.now() + 12 * 60 * 60 * 1000); // 12 hours
+  await SessionReliabilityTracker.createSession(
+    user._id.toString(),
+    sessionId,
+    tokenExpiration,
+    req.ip,
+    req.headers['user-agent']
   );
 
   // Always redirect to OAuth page with token in URL for frontend to handle

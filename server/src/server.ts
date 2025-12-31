@@ -3,6 +3,7 @@ import http from 'http';
 import app from './app';
 import connectDB from './lib/mongodb';
 import connectSocket from './lib/socketio';
+import { startSessionMonitoring } from './util/sessionMonitoring';
 
 const server = http.createServer(app);
 
@@ -27,6 +28,9 @@ console.log('----------------------------------------');
   try {
     await connectDB();
     await connectSocket(server);
+    
+    // Start session monitoring and scheduled jobs
+    startSessionMonitoring();
   } catch (error) {
     console.log(error);
     process.exit(1);

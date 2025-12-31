@@ -68,7 +68,11 @@ const authSlice = createSlice({
     },
 
     validateUser: (state, action) => {
-      state.isSignedIn = action.payload?.isSignedIn;
+      // Handle error case - don't update state if request failed
+      if (action.payload?.error) {
+        return;
+      }
+      state.isSignedIn = action.payload?.isSignedIn || false;
     },
   },
 

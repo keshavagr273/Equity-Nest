@@ -23,6 +23,7 @@ const WithAuth = (
     const router = useRouter();
     const pathname = usePathname();
     const [loading, setLoading] = useState(pathname.startsWith('/chart/'));
+    const [hasChecked, setHasChecked] = useState(false);
 
     const { isSignedIn, status } = useSelector((state: any) => state.auth);
     // console.log('🚀 isSignedIn:', isSignedIn);
@@ -30,13 +31,24 @@ const WithAuth = (
     const dispatch = useDispatch<any>();
 
     useEffect(() => {
+      // Only run once
+      if (hasChecked) {
+        console.log('🚀 WithAuth: Already checked, skipping');
+        return;
+      }
+
       console.log('🚀 WithAuth: Checking authentication...');
       console.log('🚀 WithAuth: Current isSignedIn:', isSignedIn);
       console.log('🚀 WithAuth: Current status:', status);
       
+      setHasChecked(true);
+      
       getReq().then((data) => {
         console.log('🚀 WithAuth: Validation response:', data);
         dispatch(validateUser(data));
+        setLoading(false);
+      }).catch((error) => {
+        console.error('🚀 WithAuth: Error validating:', error);
         setLoading(false);
       });
 
@@ -44,7 +56,7 @@ const WithAuth = (
       return () => {
         socket.disconnect();
       };
-    }, [dispatch, isPublicPage, isSignedIn, router]);
+    }, [dispatch, hasChecked]);
 
     if (loading) {
       return <Loader />;

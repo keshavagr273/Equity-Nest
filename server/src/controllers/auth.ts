@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import axios from 'axios';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { randomBytes } from 'crypto';
 
 // @ts-ignore
 import * as UpstoxClient from 'upstox-js-sdk';
@@ -14,6 +15,7 @@ import {
   signupValidationRules,
   validate,
 } from '../middlewares/validators';
+import { SessionReliabilityTracker } from '../util/sessionMetrics';
 
 //* ************** Interface *************** *//
 interface RequestBody {
@@ -48,7 +50,7 @@ export const validateLogin = async (req: User, res: Response) => {
         message: 'Unauthorized, please login',
       };
       console.log('🚀 ValidateLogin: Sending response:', response);
-      return res.status(401).json(response);
+      return res.status(200).json(response);
     }
   } catch (error) {
     console.log('🚀 ValidateLogin error:', error);
@@ -82,10 +84,21 @@ export const signin = [
 
     let accessToken;
     try {
+      const sessionId = randomBytes(16).toString('hex');
       accessToken = jwt.sign(
-        { _id: user._id, email: user.email },
+        { _id: user._id, email: user.email, sessionId },
         process.env.PRIVATE_KEY as string,
         { expiresIn: '12h' }
+      );
+
+      // Track session start
+      const tokenExpiration = new Date(Date.now() + 12 * 60 * 60 * 1000); // 12 hours
+      await SessionReliabilityTracker.createSession(
+        user._id.toString(),
+        sessionId,
+        tokenExpiration,
+        req.ip,
+        req.headers['user-agent']
       );
     } catch (error) {
       console.log('Error signing JWT', error);
@@ -145,13 +158,24 @@ export const signup = [
 
     let accessToken;
     try {
+      const sessionId = randomBytes(16).toString('hex');
       accessToken = jwt.sign(
-        { _id: id, email: email },
+        { _id: id, email: email, sessionId },
         process.env.PRIVATE_KEY as string,
         { expiresIn: '12h' }
       );
+
+      // Track session start
+      const tokenExpiration = new Date(Date.now() + 12 * 60 * 60 * 1000); // 12 hours
+      await SessionReliabilityTracker.createSession(
+        id.toString(),
+        sessionId,
+        tokenExpiration,
+        req.ip,
+        req.headers['user-agent']
+      );
     } catch (error) {
-      console.log('Error signing JWT', error);
+      console.log('🚀 signup error:', error);
       return res.status(500).json({ message: 'Internal Server Error' });
     }
 
@@ -173,7 +197,23 @@ export const signup = [
 ];
 
 // Handle User Logout
-export const logout = (req: Request, res: Response) => {
+export const logout = async (req: any, res: Response) => {
+  try {
+    // Get sessionId from JWT token
+    const token = req.cookies.jwtoken || req.headers.authorization?.split(' ')[1];
+    
+    if (token) {
+      const decoded: any = jwt.verify(token, process.env.PRIVATE_KEY as string);
+      if (decoded.sessionId) {
+        // Mark session as logged out
+        await SessionReliabilityTracker.endSession(decoded.sessionId, 'logout');
+      }
+    }
+  } catch (error) {
+    console.log('Error tracking logout:', error);
+  }
+
+  res.clearCookie('jwtoken');
   return res
     .status(200)
     .json({ isSignedIn: false, message: 'sign out successfully' });
