@@ -18,7 +18,7 @@ import { setMarketStatus, setDataType } from '@/lib/redux/slices/stockSlice';
 import SelectStockDay from './SelectStockDay';
 import {
   useGetStockDataQuery,
-  useLazyGetOnSelecteStockDataQuery,
+  useLazyGetOnSelectedStockDataQuery,
 } from '@/lib/redux/api/stockApi';
 import {
   RED,
@@ -58,7 +58,7 @@ const StockData: FC = () => {
 
   // Get historical stock data by days
   const [getHistoricalData, { data: historicalData }] =
-    useLazyGetOnSelecteStockDataQuery();
+    useLazyGetOnSelectedStockDataQuery();
 
   const updateOHLCData: any = (param: any) => {
     if (param.seriesData && param.seriesData.has(series)) {
@@ -203,7 +203,7 @@ const StockData: FC = () => {
       }
 
       // Subscribe to crosshair move to get the hovered candlestick data
-      chart?.subscribeCrosshairMove((param) => {
+      chart?.subscribeCrosshairMove((param: any) => {
         if (param.point && param.seriesData && param.seriesData.has(series)) {
           setIsHovered(true);
           updateOHLCData(param);
@@ -217,14 +217,14 @@ const StockData: FC = () => {
 
     // Handle Sokcet connect and real time data
     socket.connect();
-    socket.on('marketStatusChange', (marketStatusChange) => {
+    socket.on('marketStatusChange', (marketStatusChange: any) => {
       refetch();
     });
 
     if (data?.marketStatus !== null && data?.marketStatus !== 'closed') {
       socket.emit('selectSymbol', params.symbol);
 
-      socket.on('symbolData', (newData) => {
+      socket.on('symbolData', (newData: any) => {
         if (newData && newData.type === 'live_feed') {
           // Extracting the dynamic stock key
           const stockKey = Object.keys(newData.feeds || {})[0];
@@ -280,7 +280,8 @@ const StockData: FC = () => {
     }
 
     return () => {
-      socket.disconnect();
+      socket.off('marketStatusChange');
+      socket.off('symbolData');
 
       // Cleanup: Unsubscribe from crosshair move when the component is unmounted
       if (chart) {
@@ -311,7 +312,6 @@ const StockData: FC = () => {
     } (${prefix}${percentageChangeValue.toFixed(2)}%)`;
 
     document.title = newTitle;
-    document.body.style.backgroundColor = 'red !important';
 
     return () => {
       document.title = 'Stock Trading Platform';

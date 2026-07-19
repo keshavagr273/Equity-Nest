@@ -88,7 +88,7 @@ const authSlice = createSlice({
     });
 
     builder.addCase(userLogin.rejected, (state) => {
-      state.status = 'failed';
+      state.status = 'idle';
     });
 
     // oauthLogin reducers
@@ -102,7 +102,7 @@ const authSlice = createSlice({
     });
 
     builder.addCase(oauthLogin.rejected, (state) => {
-      state.status = 'failed';
+      state.status = 'idle';
     });
   },
 });

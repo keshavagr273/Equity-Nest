@@ -5,7 +5,7 @@ import isAuthenticate from '../middlewares/isAuth';
 const router = Router();
 
 // Get session reliability metrics
-router.get('/session-stats', async (req: Request, res: Response) => {
+router.get('/session-stats', isAuthenticate, async (req: Request, res: Response) => {
   try {
     const days = parseInt(req.query.days as string) || 30;
     const stats = await SessionReliabilityTracker.getSessionStats(days);
@@ -22,7 +22,7 @@ router.get('/session-stats', async (req: Request, res: Response) => {
 });
 
 // Get session reliability percentage
-router.get('/reliability', async (req: Request, res: Response) => {
+router.get('/reliability', isAuthenticate, async (req: Request, res: Response) => {
   try {
     const days = parseInt(req.query.days as string) || 30;
     const reliability = await SessionReliabilityTracker.calculateReliability(days);
@@ -39,7 +39,7 @@ router.get('/reliability', async (req: Request, res: Response) => {
 });
 
 // Cleanup old session records (admin only)
-router.post('/cleanup', async (req: Request, res: Response) => {
+router.post('/cleanup', isAuthenticate, async (req: Request, res: Response) => {
   try {
     const deletedCount = await SessionReliabilityTracker.cleanupOldSessions();
     return res.status(200).json({

@@ -67,6 +67,12 @@ export const HistoricalData = async (req: Request, res: Response) => {
   try {
     const marketStatus = await getMarketStatus();
     const day = req.params.day.slice(0, -1);
+    const parsedDay = Number(day);
+
+    if (isNaN(parsedDay) || parsedDay <= 0) {
+      return res.status(400).json({ message: 'Invalid day parameter' });
+    }
+
     const symbol = req.params.symbol.toUpperCase();
 
     const today = new Date();
@@ -116,13 +122,16 @@ export const stockSearch = async (req: Request, res: Response) => {
 
   const symbolResults = new Map();
 
-  stream.on('data', (row) => {
+  stream.on('data', (row: any) => {
     if (row.tradingsymbol.includes(uppercaseSymbol)) {
       // Extract the main part of the symbol using regex
-      const mainSymbol = row.tradingsymbol.match(/^[A-Z]+/)[0];
+      const match = row.tradingsymbol.match(/^[A-Z]+/);
+      if (match) {
+        const mainSymbol = match[0];
 
-      if (!symbolResults.has(mainSymbol)) {
-        symbolResults.set(mainSymbol, row.name);
+        if (!symbolResults.has(mainSymbol)) {
+          symbolResults.set(mainSymbol, row.name);
+        }
       }
     }
   });
@@ -138,7 +147,7 @@ export const stockSearch = async (req: Request, res: Response) => {
   });
 
   // Handle any errors from the stream
-  stream.on('error', (error) => {
+  stream.on('error', (error: any) => {
     console.log('🚀 searchStock stream.error', error);
     res.status(500).end();
   });

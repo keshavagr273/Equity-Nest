@@ -96,7 +96,7 @@ const StockGrid: FC<StockGridProps> = ({ stocks, stockLoading }) => {
           <Grid
             item
             xs={12}
-            key={index}
+            key={stock.name}
             onMouseEnter={() => setHovered(index)}
             onMouseLeave={() => setHovered(null)}
             sx={{

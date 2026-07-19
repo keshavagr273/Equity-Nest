@@ -31,7 +31,7 @@ interface stockDaysProps {
   onDaySelect: (day: string) => void;
   onHighlighted: (bool: boolean) => void;
   marketStatus: string;
-  dataType: string;
+  dataType: string | null;
 }
 //* ************************ ************************ *//
 const SelectStockDay: FC<stockDaysProps> = ({

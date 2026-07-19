@@ -14,14 +14,9 @@ const isAuthenticate = async (
   res: Response,
   next: NextFunction
 ) => {
-  console.log('🚀 isAuthenticate: Checking token...');
-  
   // Try to get token from Authorization header first, then from cookies
   const authHeader = req.headers.authorization;
   const cookieToken = req.cookies.jwtoken;
-  
-  console.log('🚀 isAuthenticate: authHeader:', authHeader);
-  console.log('🚀 isAuthenticate: cookieToken:', cookieToken);
   
   let token = null;
   
@@ -32,10 +27,9 @@ const isAuthenticate = async (
   }
 
   if (!token) {
-    console.log('🚀 isAuthenticate: No token found, continuing without auth');
-    // Allow the request to continue without authentication
-    // The controller will handle the logic for unauthenticated users
-    return next();
+    return res.status(401).json({
+      message: 'Unauthorized: token missing',
+    });
   }
 
   if (!PRIVATE_KEY) {
@@ -46,7 +40,6 @@ const isAuthenticate = async (
     const decoded = jwt.verify(token, PRIVATE_KEY);
     req.token = token;
     req.user = decoded;
-    console.log('🚀 isAuthenticate: Token verified, user:', decoded);
     next();
   } catch (error) {
     console.log('🚀 isAuthenticate: Token verification failed:', error);

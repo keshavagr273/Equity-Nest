@@ -8,7 +8,11 @@ export const profileApi = createApi({
   tagTypes: ['auth'],
   endpoints: (builder) => ({
     userProfile: builder.query({
-      query: () => `user`,
+      query: () => ({
+        url: `user`,
+        method: 'GET',
+        credentials: 'include',
+      }),
     }),
 
     logout: builder.mutation({

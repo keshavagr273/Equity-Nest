@@ -22,21 +22,21 @@ const fetchInstrumentDetails = async (
   stockName: string
 ): Promise<Instrument | null> => {
   return new Promise((resolve, reject) => {
-    const stream = fs
-      .createReadStream(path.join(__dirname, 'NSE.csv'))
-      .pipe(csv());
-
-    stream
+    let found = false;
+    fs.createReadStream(path.join(__dirname, 'NSE.csv'))
+      .pipe(csv())
       .on('data', (row: Instrument) => {
-        if (row.tradingsymbol === stockName || row.name === stockName) {
+        if (!found && (row.tradingsymbol === stockName || row.name === stockName)) {
+          found = true;
           resolve(row);
-          stream.destroy(); // Stop the stream when the data is found
         }
       })
       .on('end', () => {
-        resolve(null);
+        if (!found) {
+          resolve(null); // Resolve with null if stock not found
+        }
       })
-      .on('error', (error) => {
+      .on('error', (error: any) => {
         reject(error);
       });
   });

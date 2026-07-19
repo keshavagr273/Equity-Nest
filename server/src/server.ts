@@ -31,12 +31,12 @@ console.log('----------------------------------------');
     
     // Start session monitoring and scheduled jobs
     startSessionMonitoring();
+
+    server.listen(PORT, () => {
+      console.log(`server listening on ${PORT}`);
+    });
   } catch (error) {
     console.log(error);
     process.exit(1);
   }
-
-  server.listen(PORT, () => {
-    console.log(`server listening on ${PORT}`);
-  });
 })();

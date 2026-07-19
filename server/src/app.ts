@@ -9,13 +9,7 @@ const app = express();
 app.use(helmet());
 app.disable('x-powered-by');
 
-// Debug middleware to log all requests
-app.use((req, res, next) => {
-  console.log('🚀 App Request:', req.method, req.path);
-  console.log('🚀 App Request URL:', req.url);
-  console.log('🚀 App Request Base URL:', req.baseUrl);
-  next();
-});
+// Debug middleware removed for cleaner logs
 
 const whiteList = [
   'http://localhost:3000',
@@ -27,29 +21,15 @@ const whiteList = [
 
 const corsOption = {
   origin: function (origin: string | undefined, callback: any) {
-    console.log('🚀 CORS: Request from origin:', origin);
-    console.log('🚀 CORS: Whitelist:', whiteList);
-    
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
-      console.log('🚀 CORS: Allowing request with no origin');
       return callback(null, true);
     }
     
     if (whiteList.indexOf(origin) !== -1) {
-      console.log('🚀 CORS: Allowing origin:', origin);
       callback(null, true);
     } else {
-      console.log('🚀 CORS: Blocking origin:', origin);
-      console.log('🚀 CORS: Available origins:', whiteList);
-      
-      // For debugging, allow all origins temporarily
-      if (process.env.NODE_ENV === 'production') {
-        console.log('🚀 CORS: Temporarily allowing blocked origin for debugging');
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
@@ -66,8 +46,7 @@ app.use(cookieParser());
 app.use('/api', useRoutes);
 
 // Test endpoint to verify server is working
-app.get('/test', (req, res) => {
-  console.log('🚀 Test endpoint hit');
+app.get('/test', (req: express.Request, res: express.Response) => {
   res.json({ message: 'Server is working', timestamp: new Date().toISOString() });
 });
 

@@ -104,41 +104,31 @@ export const getMarketStatus = async (): Promise<string | undefined> => {
     const istTimeZone = 'Asia/Kolkata';
     const nowInIST = utcToZonedTime(new Date(), istTimeZone);
 
-    const formattedTime = format(nowInIST, 'yyyy-MM-dd HH:mm:ss', {
-      timeZone: istTimeZone,
-    });
-
-    // Gov Holidays in 2023
+    // Gov Holidays (Placeholder for current year)
     const closedDates = [
-      utcToZonedTime(new Date(2023, 10, 14), istTimeZone), // 14-Nov-2023
-      utcToZonedTime(new Date(2023, 10, 27), istTimeZone), // 27-Nov-2023
-      utcToZonedTime(new Date(2023, 11, 25), istTimeZone), // 25-Dec-2023
+      utcToZonedTime(new Date(Date.UTC(2026, 0, 26)), istTimeZone),
+      utcToZonedTime(new Date(Date.UTC(2026, 7, 15)), istTimeZone),
+      utcToZonedTime(new Date(Date.UTC(2026, 11, 25)), istTimeZone),
     ];
-
-    const currentTime = new Date(formattedTime);
 
     // If today is a weekend or the market is closed on a specific date, return 'closed'
     if (
-      isWeekend(currentTime) ||
-      closedDates.some((closedDate) => isSameDay(currentTime, closedDate))
+      isWeekend(nowInIST) ||
+      closedDates.some((closedDate) => isSameDay(nowInIST, closedDate))
     ) {
       return 'closed';
     }
 
-    // Market Open Time
-    const marketOpenTime = new Date();
-    marketOpenTime.setHours(9, 15, 0); // 9:15 am IST
-
-    // Market Close Time
-    const marketCloseTime = new Date();
-    marketCloseTime.setHours(15, 30, 0); // 3:30 pm IST
+    const currentMinutes = nowInIST.getHours() * 60 + nowInIST.getMinutes();
+    const marketOpenMinutes = 9 * 60 + 15; // 9:15 am IST
+    const marketCloseMinutes = 15 * 60 + 30; // 3:30 pm IST
 
     // If the initial status is 'closed' and the current time is within market hours,
     // set status to 'open'
     if (
       status === 'closed' &&
-      currentTime >= marketOpenTime &&
-      currentTime <= marketCloseTime
+      currentMinutes >= marketOpenMinutes &&
+      currentMinutes <= marketCloseMinutes
     ) {
       status = 'open';
     }

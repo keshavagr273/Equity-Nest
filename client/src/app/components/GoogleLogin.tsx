@@ -14,13 +14,15 @@ const GoogleLogin: FC<GoogleLoginProps> = ({ text }) => {
   return (
     <Box>
       <Button
+        component={Link}
+        href={getGoogleOAuthURL()}
         sx={{
           borderRadius: '0.5rem',
           backgroundColor: 'rgba(144, 202, 249, 0.15)',
           border: '1px solid rgba(144, 202, 249, 0.15)',
+          textDecoration: 'none',
         }}
       >
-        <Link href={getGoogleOAuthURL()}>
           <Box
             sx={{
               display: 'flex',
@@ -60,7 +62,6 @@ const GoogleLogin: FC<GoogleLoginProps> = ({ text }) => {
               </Typography>
             </Box>
           </Box>
-        </Link>
       </Button>
     </Box>
   );

@@ -85,7 +85,7 @@ export class SessionReliabilityTracker {
     });
 
     const failedSessions = await SessionMetrics.countDocuments({
-      startDate: { $gte: startDate },
+      startTime: { $gte: startDate },
       status: 'failed',
     });
 
@@ -119,7 +119,7 @@ export class SessionReliabilityTracker {
 
     if (sessions.length === 0) return 0;
 
-    const totalDuration = sessions.reduce((sum, session) => {
+    const totalDuration = sessions.reduce((sum: any, session: any) => {
       const duration =
         session.endTime!.getTime() - session.startTime.getTime();
       return sum + duration;

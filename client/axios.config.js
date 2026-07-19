@@ -9,7 +9,7 @@ const api = axios.create({
 // Request interceptor to add JWT token to Authorization header
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('jwt');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('jwt') : null;
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
@@ -27,7 +27,7 @@ api.interceptors.response.use(
   },
   (error) => {
     // Handle 401 errors by clearing token and redirecting to login
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && typeof window !== 'undefined') {
       localStorage.removeItem('jwt');
       window.location.href = '/signin';
     }

@@ -31,26 +31,23 @@ interface User extends Request {
 // First time user validation (to check user Signined/loggedIn or not)
 export const validateLogin = async (req: User, res: Response) => {
   try {
-    console.log('🚀 ValidateLogin: Starting validation...');
-    console.log('🚀 ValidateLogin: Cookies:', req.cookies);
-    console.log('🚀 ValidateLogin: User:', req.user);
-    console.log('🚀 ValidateLogin: Headers:', req.headers);
-    
     if (req.user) {
-      console.log('🚀 ValidateLogin: User is authenticated');
-      const response = { isSignedIn: true, message: 'User is logged in.' };
-      console.log('🚀 ValidateLogin: Sending response:', response);
-      return res
-        .status(200)
-        .json(response);
+      const user = await User.findById((req.user as any)._id);
+      if (!user) {
+        return res.status(401).json({ isSignedIn: false, message: 'User not found' });
+      }
+      return res.status(200).json({ 
+        isSignedIn: true, 
+        message: 'User is logged in.',
+        _id: user._id,
+        email: user.email,
+        name: user.name
+      });
     } else {
-      console.log('🚀 ValidateLogin: No user found');
-      const response = {
+      return res.status(401).json({
         isSignedIn: false,
         message: 'Unauthorized, please login',
-      };
-      console.log('🚀 ValidateLogin: Sending response:', response);
-      return res.status(200).json(response);
+      });
     }
   } catch (error) {
     console.log('🚀 ValidateLogin error:', error);
@@ -65,27 +62,21 @@ export const signin = [
   async (req: Request, res: Response) => {
     const { email, password } = req.body as RequestBody;
 
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      return res.status(404).json({ message: 'No user found' });
-    }
-
     try {
+      const user = await User.findOne({ email });
+
+      if (!user) {
+        return res.status(404).json({ message: 'No user found' });
+      }
+
       const isMatch = await bcrypt.compare(password, user.password);
 
       if (!isMatch) {
         return res.status(401).json({ message: 'Invalid email or password' });
       }
-    } catch (error) {
-      console.log('Error comparing password', error);
-      return res.status(500).json({ message: 'Internal Server Error' });
-    }
 
-    let accessToken;
-    try {
       const sessionId = randomBytes(16).toString('hex');
-      accessToken = jwt.sign(
+      const accessToken = jwt.sign(
         { _id: user._id, email: user.email, sessionId },
         process.env.PRIVATE_KEY as string,
         { expiresIn: '12h' }
@@ -100,26 +91,25 @@ export const signin = [
         req.ip,
         req.headers['user-agent']
       );
+
+      res.cookie('jwtoken', accessToken, {
+        maxAge: 43200000, // 12 hr
+        httpOnly: true,
+        path: '/',
+        sameSite: 'none',
+        secure: true,
+      });
+
+      return res.status(200).json({
+        message: 'Login Successful',
+        isSignedIn: true,
+        _id: user.id,
+        email: user.email,
+      });
     } catch (error) {
-      console.log('Error signing JWT', error);
+      console.log('Error during signin', error);
       return res.status(500).json({ message: 'Internal Server Error' });
     }
-
-    res.cookie('jwtoken', accessToken, {
-      maxAge: 43200000, // 12 hr
-      httpOnly: true,
-      path: '/',
-      sameSite: 'none',
-      secure: true,
-    });
-
-    return res.status(200).json({
-      message: 'Login Successfull',
-      isSignedIn: true,
-      _id: user.id,
-      email: user.email,
-      token: accessToken,
-    });
   },
 ];
 

@@ -56,7 +56,7 @@ const connectWebSocket = async (wsUrl: any) => {
       console.log('🚀 ws disconnected');
     });
 
-    ws.on('error', (error) => {
+    ws.on('error', (error: any) => {
       console.log('🚀 ws error:', error);
       reject(error);
     });
@@ -93,26 +93,22 @@ const connectSocket = async (app: any) => {
 
   const socketToWsMap = new Map();
 
-  io.on('connection', (socket) => {
+  io.on('connection', (socket: any) => {
     let ws: any;
 
-    // Schedule a job to check the market status at 9:15 AM
-    schedule.scheduleJob(
+    // Schedule market status updates
+    const openJob = schedule.scheduleJob(
       { hour: 9, minute: 15, tz: 'Asia/Kolkata' },
       async () => {
-        const marketStatus = await getMarketStatus();
-        // Emit the market status to the connected client
-        socket.emit('marketStatusChange', marketStatus);
+        socket.emit('marketStatusChange', await getMarketStatus());
       }
     );
 
-    // Schedule a job to check the market status at 3:30 PM
-    schedule.scheduleJob(
+    const closeJob = schedule.scheduleJob(
       { hour: 15, minute: 30, tz: 'Asia/Kolkata' },
       async () => {
-        const marketStatus = 'closed'; // Market is closed at 3:30 PM
         // Emit the market status to the connected client
-        socket.emit('marketStatusChange', marketStatus);
+        socket.emit('marketStatusChange', await getMarketStatus());
       }
     );
 
@@ -189,6 +185,8 @@ const connectSocket = async (app: any) => {
     // Handle socket.io disconnect and close the associated WebSocket
     socket.on('disconnect', (reason: string) => {
       // console.log(`Socket.io client disconnected. Reason: ${reason}`);
+      openJob.cancel();
+      closeJob.cancel();
 
       // Fetch the WebSocket instance associated with this socket.io socket
       const clientWs = socketToWsMap.get(socket.id);
