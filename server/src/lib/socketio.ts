@@ -85,7 +85,13 @@ initProtobuf();
 const connectSocket = async (app: any) => {
   const io = new Server(app, {
     cors: {
-      origin: process.env.CLIENT_DOMAIN,
+      origin: [
+        'http://localhost:3000',
+        'https://equity-nest.vercel.app',
+        'https://equitynest.vercel.app',
+        'https://equity-nest-mjil.vercel.app',
+        process.env.CLIENT_DOMAIN as string,
+      ].filter(Boolean),
       methods: ['GET', 'POST'],
       credentials: true,
     },
