@@ -19,6 +19,9 @@ export const userLogin = createAsyncThunk(
       let data = await res.data;
 
       if (data) {
+        if (data.token) {
+          localStorage.setItem('jwt', data.token);
+        }
         return data;
       }
     } catch (error: any) {

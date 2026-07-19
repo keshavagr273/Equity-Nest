@@ -96,6 +96,9 @@ const Signup: FC<WithAuthProps> = ({ isAuthenticated }) => {
         const checkAuth: any = await postData('/signup', userData);
 
         if (!checkAuth?.error?.error) {
+          if (checkAuth.token) {
+            localStorage.setItem('jwt', checkAuth.token);
+          }
           router.push('/');
         } else {
           setAuthError(checkAuth.error.error);

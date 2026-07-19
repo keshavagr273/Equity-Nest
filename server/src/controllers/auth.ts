@@ -105,6 +105,7 @@ export const signin = [
         isSignedIn: true,
         _id: user.id,
         email: user.email,
+        token: accessToken,
       });
     } catch (error) {
       console.log('Error during signin', error);
@@ -182,6 +183,7 @@ export const signup = [
       _id: id,
       name: name,
       email: userEmail,
+      token: accessToken,
     });
   },
 ];
