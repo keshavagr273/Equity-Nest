@@ -29,7 +29,14 @@ api.interceptors.response.use(
     // Handle 401 errors by clearing token and redirecting to login
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       localStorage.removeItem('jwt');
-      window.location.href = '/signin';
+      
+      const currentPath = window.location.pathname;
+      const isAuthPage = currentPath === '/signin' || currentPath === '/signup' || currentPath === '/oauth';
+      const isValidateReq = error.config?.url?.includes('/validate');
+      
+      if (!isAuthPage && !isValidateReq) {
+        window.location.href = '/signin';
+      }
     }
     return Promise.reject(error);
   }

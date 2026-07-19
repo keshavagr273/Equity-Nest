@@ -42,6 +42,13 @@ const WithAuth = (
       return <Loader />;
     }
 
+    if (!isSignedIn && !isPublicPage) {
+      if (typeof window !== 'undefined') {
+        router.push('/signin');
+      }
+      return <Loader />;
+    }
+
     return <Component {...props} isAuthenticated={isSignedIn} />;
   };
 
