@@ -24,8 +24,8 @@ const stocks = [
     country: 'India',
   },
   {
-    name: 'HDFC',
-    companyName: 'HOUSING DEVELOPMENT FINANCE CO',
+    name: 'KOTAKBANK',
+    companyName: 'KOTAK MAHINDRA BANK LTD',
     symbol: 'NSE',
     country: 'India',
   },
