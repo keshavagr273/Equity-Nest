@@ -6,6 +6,9 @@ import useRoutes from './routes';
 
 const app = express();
 
+// Trust reverse proxy headers (Render, Vercel, Nginx) so express-rate-limit correctly gets client IPs
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.disable('x-powered-by');
 
