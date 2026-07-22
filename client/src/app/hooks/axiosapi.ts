@@ -6,9 +6,7 @@ export const postData = async <T>(
 ) => {
   try {
     const res = await api.post<T>(url, userData);
-    const data = await res.data;
-
-    return data;
+    return res.data;
   } catch (error: any) {
     return { error: error?.response?.data };
   }
@@ -16,15 +14,12 @@ export const postData = async <T>(
 
 export const getReq = async () => {
   try {
-    console.log('🚀 getReq: Making validation request...');
-    console.log('🚀 getReq: Cookies:', document.cookie);
-    
+    // H-5 FIX: Removed console.log statements that were printing
+    // document.cookie (sensitive) and API response data on every validation call.
     const req = await api.get('/validate');
-    console.log('🚀 getReq: Response:', req.data);
     return req.data;
   } catch (error: any) {
-    console.log('🚀 getReq: Error:', error?.response?.data);
-    // If it's a 401, that's expected for unauthenticated users - return the data
+    // If it's a 401, that's expected for unauthenticated users — return the data
     if (error?.response?.status === 401 && error?.response?.data) {
       return error.response.data;
     }

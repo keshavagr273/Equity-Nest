@@ -34,17 +34,10 @@ const Navbar: FC = () => {
 
   useEffect(() => {
     const handleScroll = () => {
-      // Here, 100 is the amount of pixels scrolled before changing the navbar style
-      if (window.scrollY > 100) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+      setIsScrolled(window.scrollY > 100);
     };
 
     window.addEventListener('scroll', handleScroll);
-
-    // Cleanup listener on component unmount
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
@@ -61,20 +54,24 @@ const Navbar: FC = () => {
   // Handle user logout
   const userLogout = async () => {
     try {
-      const resLogout = await logout('');
-      
-      // Clear token from localStorage
-      localStorage.removeItem('jwt');
-      
+      await logout('');
+
+      // H-1 FIX: Removed localStorage.removeItem('jwt') — we no longer store
+      // the token in localStorage. Cookie is cleared by the server.
+
       dispatch(signout({ isSignedIn: false }));
-      router.push('/'); // Redirect to home page after successful logout
+      router.push('/');
     } catch (error) {
       console.error('Logout error:', error);
     }
   };
 
   return (
+    // L-4 FIX: Added role="navigation" and aria-label to AppBar for screen readers.
     <AppBar
+      component="nav"
+      role="navigation"
+      aria-label="Main navigation"
       position='fixed'
       sx={{
         backdropFilter: isScrolled ? 'blur(20px)' : 'none',
@@ -97,6 +94,7 @@ const Navbar: FC = () => {
             {/* Left items */}
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <TrendingUp
+                aria-hidden="true"
                 sx={{
                   height: {
                     xs: '2rem',
@@ -144,8 +142,17 @@ const Navbar: FC = () => {
 
               {isSignedIn && (
                 <Box sx={{ flexGrow: 0 }}>
-                  <Tooltip title='Open settings'>
-                    <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
+                  <Tooltip title='Open user menu'>
+                    {/* L-4 FIX: Added aria-label, aria-haspopup, and aria-controls
+                        to IconButton so screen readers announce the purpose and state. */}
+                    <IconButton
+                      onClick={handleOpenUserMenu}
+                      sx={{ p: 0 }}
+                      aria-label="Open user menu"
+                      aria-haspopup="true"
+                      aria-controls={anchorElUser ? 'menu-appbar' : undefined}
+                      aria-expanded={Boolean(anchorElUser)}
+                    >
                       <Avatar sx={{ background: 'transparent' }}>
                         <Person
                           sx={{
@@ -173,8 +180,8 @@ const Navbar: FC = () => {
                     onClose={handleCloseUserMenu}
                   >
                     {settings.map((setting) => (
-                      <MenuItem 
-                        key={setting} 
+                      <MenuItem
+                        key={setting}
                         onClick={setting === 'Sign out' ? userLogout : handleCloseUserMenu}
                       >
                         <Typography textAlign='center'>{setting}</Typography>

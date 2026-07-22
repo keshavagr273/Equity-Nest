@@ -4,8 +4,8 @@ import { randomBytes } from 'crypto';
 import bcrypt from 'bcryptjs';
 
 import User from '../models/userSchema';
-import { getGoogleUser } from './googleOAuth';
-import { getGoogleOAuthToken } from './googleOAuth';
+// L-1 FIX: Combined duplicate imports from same module into a single statement.
+import { getGoogleUser, getGoogleOAuthToken, GoogleUserProfile } from './googleOAuth';
 import { SessionReliabilityTracker } from '../util/sessionMetrics';
 
 export const googleOAuthHandler = async (req: Request, res: Response) => {
@@ -17,22 +17,23 @@ export const googleOAuthHandler = async (req: Request, res: Response) => {
     }
 
     const { id_token, access_token } = await getGoogleOAuthToken({ code });
-    const googleUser: any = await getGoogleUser({ id_token, access_token });
+    const googleUser: GoogleUserProfile = await getGoogleUser({ id_token, access_token });
 
-    let user: any = await User.findOne({ email: googleUser.email });
+    // M-3 FIX: Moved email verification check BEFORE the DB lookup so it applies
+    // to both new and existing users (previously only checked for new users).
+    if (!googleUser.verified_email) {
+      return res.status(403).send('Google account is not verified');
+    }
 
-    // if no user then save user to db
+    let user = await User.findOne({ email: googleUser.email });
+
+    // If no user then save user to db
     if (!user) {
-      if (!googleUser.verified_email) {
-        return res.status(403).send('Google account is not verified');
-      }
-
       const picture = googleUser.picture.replace('=s96-c', '=s512-c');
-      
+
       const randomPassword = randomBytes(20).toString('hex');
       const hashedPassword = await bcrypt.hash(randomPassword, 12);
 
-      //create new user
       user = new User({
         name: googleUser.name,
         email: googleUser.email,
@@ -46,7 +47,7 @@ export const googleOAuthHandler = async (req: Request, res: Response) => {
     createAndSendToken(user, res, req);
   } catch (error) {
     console.error('Google OAuth Error:', error);
-    return res.redirect(`${process.env.CLIENT_DOMAIN}/login`);
+    return res.redirect(`${process.env.CLIENT_DOMAIN}/signin`);
   }
 };
 

@@ -28,7 +28,7 @@ export const fetchUpstoxData = async (symbol: string): Promise<string> => {
       // @ts-ignore
       (error, data, response) => {
         if (error) {
-          console.log('🚀 fetchUpstoxData error:', error);
+          console.error('fetchUpstoxData error:', error);
           reject(error);
         } else {
           resolve(data);
@@ -71,7 +71,7 @@ export const getLastMarketData = async ({
       // @ts-ignore
       (error, data, response) => {
         if (error) {
-          console.error(error);
+          console.error('getLastMarketData error:', error);
           reject(error);
         } else {
           resolve(data);
@@ -86,14 +86,17 @@ export const getLastMarketData = async ({
 // *****************************************************************
 export const getMarketStatus = async (): Promise<string | undefined> => {
   try {
-    const url = `https://www.alphavantage.co/query?function=MARKET_STATUS&apikey=demo`;
+    // H-4 FIX: Use ALPHAVANTAGE_API_KEY env var instead of the shared 'demo' key
+    // which is rate-limited and unsuitable for production.
+    const apiKey = process.env.ALPHAVANTAGE_API_KEY || 'demo';
+    const url = `https://www.alphavantage.co/query?function=MARKET_STATUS&apikey=${apiKey}`;
     const res = await axios.get(url);
 
-    const indiaMarketStatus = res.data.markets.filter(
+    const indiaMarketStatus = res.data.markets?.filter(
       (market: any) => market.region === 'India'
     );
 
-    if (!indiaMarketStatus.length) {
+    if (!indiaMarketStatus || !indiaMarketStatus.length) {
       return 'Market Not Found';
     }
 
@@ -123,8 +126,6 @@ export const getMarketStatus = async (): Promise<string | undefined> => {
     const marketOpenMinutes = 9 * 60 + 15; // 9:15 am IST
     const marketCloseMinutes = 15 * 60 + 30; // 3:30 pm IST
 
-    // If the initial status is 'closed' and the current time is within market hours,
-    // set status to 'open'
     if (
       status === 'closed' &&
       currentMinutes >= marketOpenMinutes &&
@@ -135,8 +136,8 @@ export const getMarketStatus = async (): Promise<string | undefined> => {
 
     return status;
   } catch (error) {
-    console.log('🚀 getMarketStatus ~ error:', error);
-    return;
+    console.error('getMarketStatus error:', error);
+    return undefined;
   }
 };
 
@@ -145,11 +146,11 @@ export const getMarketStatus = async (): Promise<string | undefined> => {
 // *****************************************************************
 export const isWeekend = (date: Date) => {
   const day = date.getDay();
-  // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  // 0 = Sunday, 6 = Saturday
   return day === 0 || day === 6;
 };
 
-// Format to full date (YYYY-MM-DD / 2022-10-01)
+// Format to full date (YYYY-MM-DD)
 export const formatDate = (date: Date): string => {
   let dd: string | number = date.getDate();
   let mm: string | number = date.getMonth() + 1; // January is 0!

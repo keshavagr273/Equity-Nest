@@ -6,43 +6,27 @@ type UserDataType = {
   password: string;
 };
 
-type OAuthDataType = {
-  token: string;
-};
-
 // Login User
 export const userLogin = createAsyncThunk(
   'auth/signin',
   async (userData: UserDataType) => {
     try {
       const res = await api.post('/signin', userData);
-      let data = await res.data;
-
-      if (data) {
-        if (data.token) {
-          localStorage.setItem('jwt', data.token);
-        }
-        return data;
-      }
+      // H-1 FIX: The server no longer sends a token in the JSON body.
+      // Authentication is handled exclusively via HttpOnly cookie (set by server).
+      // Removed localStorage.setItem('jwt', ...) — localStorage is XSS-accessible
+      // and defeats the purpose of HttpOnly cookies.
+      return res.data;
     } catch (error: any) {
-      // console.log('🚀 userLogin ~ error:', error.response?.data.message);
       throw new Error(error.response?.data.message);
     }
   }
 );
 
-// OAuth Login User
-export const oauthLogin = createAsyncThunk(
-  'auth/oauth',
-  async (oauthData: OAuthDataType) => {
-    try {
-      // For OAuth, we just need to set the token and mark as signed in
-      return { isSignedIn: true, token: oauthData.token };
-    } catch (error: any) {
-      throw new Error('OAuth login failed');
-    }
-  }
-);
+// M-7 FIX: Removed the dead `oauthLogin` async thunk and its `OAuthDataType`.
+// The thunk made no network calls and was never invoked — it just returned a
+// hardcoded object. The /oauth page relies on WithAuth's getReq() to establish
+// the session from the HttpOnly cookie set by the server redirect.
 
 export interface initialStateInterface {
   name: string;
@@ -76,6 +60,10 @@ const authSlice = createSlice({
         return;
       }
       state.isSignedIn = action.payload?.isSignedIn || false;
+      // Also store the user's name if provided by /validate
+      if (action.payload?.name) {
+        state.name = action.payload.name;
+      }
     },
   },
 
@@ -91,24 +79,10 @@ const authSlice = createSlice({
     });
 
     builder.addCase(userLogin.rejected, (state) => {
-      state.status = 'idle';
-    });
-
-    // oauthLogin reducers
-    builder.addCase(oauthLogin.pending, (state) => {
-      state.status = 'loading';
-    });
-
-    builder.addCase(oauthLogin.fulfilled, (state, { payload }) => {
-      state.status = 'idle';
-      state.isSignedIn = payload?.isSignedIn;
-    });
-
-    builder.addCase(oauthLogin.rejected, (state) => {
-      state.status = 'idle';
+      state.status = 'failed';
     });
   },
 });
 
-export let { signin, signout, validateUser } = authSlice.actions;
+export const { signin, signout, validateUser } = authSlice.actions;
 export default authSlice;

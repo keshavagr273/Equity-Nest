@@ -2,38 +2,28 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: `${process.env.NEXT_PUBLIC_BACKEND_URL}/api`,
-  withCredentials: true,
+  withCredentials: true, // Sends HttpOnly cookies automatically with every request
   timeout: 10000,
 });
 
-// Request interceptor to add JWT token to Authorization header
-api.interceptors.request.use(
-  (config) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('jwt') : null;
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+// H-1 FIX: Removed the request interceptor that read a JWT from localStorage
+// and injected it as an Authorization header. Doing so defeated the purpose of
+// HttpOnly cookies (which are XSS-inaccessible). The server sets the token via
+// HttpOnly cookie; withCredentials: true above ensures it is sent automatically.
 
-// Response interceptor to handle 401 errors
+// Response interceptor to handle 401 errors globally
 api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   (error) => {
-    // Handle 401 errors by clearing token and redirecting to login
     if (error.response?.status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('jwt');
-      
+      // H-1 FIX: Removed localStorage.removeItem('jwt') — we no longer use localStorage.
       const currentPath = window.location.pathname;
-      const isAuthPage = currentPath === '/signin' || currentPath === '/signup' || currentPath === '/oauth';
+      const isAuthPage =
+        currentPath === '/signin' ||
+        currentPath === '/signup' ||
+        currentPath === '/oauth';
       const isValidateReq = error.config?.url?.includes('/validate');
-      
+
       if (!isAuthPage && !isValidateReq) {
         window.location.href = '/signin';
       }

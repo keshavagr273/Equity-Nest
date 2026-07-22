@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { check, validationResult } from 'express-validator';
 
-// login validation rules
+// Login validation rules
 export const signinValidationRules = () => {
   return [
     check('email')
@@ -18,7 +18,7 @@ export const signinValidationRules = () => {
   ];
 };
 
-// signup validation rules
+// Signup validation rules
 export const signupValidationRules = () => {
   return [
     check('fullname')
@@ -39,8 +39,10 @@ export const signupValidationRules = () => {
       .customSanitizer((value: string) => {
         return value.replace(/\s+/g, '');
       })
-      .isLength({ min: 6 })
-      .withMessage('Password must be at least 6 characters long'),
+      // M-4 FIX: Changed minimum password length from 6 to 8 to match the
+      // client-side validation in client/src/app/hooks/validation.ts.
+      .isLength({ min: 8 })
+      .withMessage('Password must be at least 8 characters long'),
 
     check('confirmPassword')
       .trim()

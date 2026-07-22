@@ -49,50 +49,57 @@ export class SessionReliabilityTracker {
       startTime: { $gte: startDate },
     });
 
+    if (totalSessions === 0) return 0;
+
     const successfulSessions = await SessionMetrics.countDocuments({
       startTime: { $gte: startDate },
-      status: { $in: ['expired', 'logout'] }, // Normal endings
+      status: { $in: ['expired', 'logout'] },
     });
-
-    const failedSessions = await SessionMetrics.countDocuments({
-      startTime: { $gte: startDate },
-      status: 'failed',
-    });
-
-    if (totalSessions === 0) return 0;
 
     const reliability = (successfulSessions / totalSessions) * 100;
     return parseFloat(reliability.toFixed(2));
   }
 
-  // Get detailed session statistics
+  // L-6 FIX: Replaced 8 separate DB round-trips with a single MongoDB aggregation
+  // $facet pipeline. All counts are computed in one query, plus calculateReliability
+  // is run separately only once.
   static async getSessionStats(days: number = 30) {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
+    const now = new Date();
 
-    const totalSessions = await SessionMetrics.countDocuments({
-      startTime: { $gte: startDate },
-    });
+    const [result] = await SessionMetrics.aggregate([
+      {
+        $facet: {
+          total: [
+            { $match: { startTime: { $gte: startDate } } },
+            { $count: 'n' },
+          ],
+          active: [
+            { $match: { status: 'active', tokenExpiration: { $gte: now } } },
+            { $count: 'n' },
+          ],
+          expired: [
+            { $match: { startTime: { $gte: startDate }, status: 'expired' } },
+            { $count: 'n' },
+          ],
+          failed: [
+            { $match: { startTime: { $gte: startDate }, status: 'failed' } },
+            { $count: 'n' },
+          ],
+          logout: [
+            { $match: { startTime: { $gte: startDate }, status: 'logout' } },
+            { $count: 'n' },
+          ],
+        },
+      },
+    ]);
 
-    const activeSessions = await SessionMetrics.countDocuments({
-      status: 'active',
-      tokenExpiration: { $gte: new Date() },
-    });
-
-    const expiredSessions = await SessionMetrics.countDocuments({
-      startTime: { $gte: startDate },
-      status: 'expired',
-    });
-
-    const failedSessions = await SessionMetrics.countDocuments({
-      startTime: { $gte: startDate },
-      status: 'failed',
-    });
-
-    const logoutSessions = await SessionMetrics.countDocuments({
-      startTime: { $gte: startDate },
-      status: 'logout',
-    });
+    const totalSessions  = result?.total?.[0]?.n  ?? 0;
+    const activeSessions = result?.active?.[0]?.n  ?? 0;
+    const expiredSessions = result?.expired?.[0]?.n ?? 0;
+    const failedSessions  = result?.failed?.[0]?.n  ?? 0;
+    const logoutSessions  = result?.logout?.[0]?.n  ?? 0;
 
     const reliability = await this.calculateReliability(days);
 
@@ -119,9 +126,8 @@ export class SessionReliabilityTracker {
 
     if (sessions.length === 0) return 0;
 
-    const totalDuration = sessions.reduce((sum: any, session: any) => {
-      const duration =
-        session.endTime!.getTime() - session.startTime.getTime();
+    const totalDuration = sessions.reduce((sum: number, session: any) => {
+      const duration = session.endTime!.getTime() - session.startTime.getTime();
       return sum + duration;
     }, 0);
 
@@ -175,7 +181,7 @@ export class SessionReliabilityTracker {
       startTime: { $lt: cutoffDate },
     });
 
-    console.log(`🧹 Cleaned up ${result.deletedCount} old session records`);
+    console.log(`Cleaned up ${result.deletedCount} old session records`);
     return result.deletedCount;
   }
 }

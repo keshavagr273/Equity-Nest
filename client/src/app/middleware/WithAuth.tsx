@@ -28,25 +28,30 @@ const WithAuth = (
 
     const dispatch = useDispatch<any>();
 
+    // M-5 FIX: Removed `pathname` from the dependency array. Previously, every
+    // client-side navigation triggered a /validate network request. Now we only
+    // validate once on mount (or when auth state is unknown).
     useEffect(() => {
-      getReq().then((data) => {
-        dispatch(validateUser(data));
-        setLoading(false);
-      }).catch((error) => {
-        console.error('Error validating:', error);
-        setLoading(false);
-      });
-    }, [dispatch, pathname]);
+      getReq()
+        .then((data) => {
+          dispatch(validateUser(data));
+          setLoading(false);
+        })
+        .catch((error) => {
+          console.error('Error validating:', error);
+          setLoading(false);
+        });
+    }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
 
     if (loading) {
       return <Loader />;
     }
 
     if (!isSignedIn && !isPublicPage) {
-      if (typeof window !== 'undefined') {
-        router.push('/signin');
-      }
-      return <Loader />;
+      router.push('/signin');
+      // L-5 FIX: Return null instead of <Loader /> during a redirect so there
+      // is no flash of the loading spinner during the transition animation.
+      return null;
     }
 
     return <Component {...props} isAuthenticated={isSignedIn} />;

@@ -9,34 +9,33 @@ const server = http.createServer(app);
 
 const PORT = process.env.PORT || 5000;
 
-// Debug: Check environment variables
-console.log('🔍 Environment Variables Check:');
-console.log('PORT:', process.env.PORT || 'Not set (using default 5000)');
-console.log('DB:', process.env.DB ? 'Set' : 'Not set');
-console.log('PRIVATE_KEY:', process.env.PRIVATE_KEY ? 'Set' : 'Not set');
-console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Not set');
-console.log('GOOGLE_CLIENT_SECRET:', process.env.GOOGLE_CLIENT_SECRET ? 'Set' : 'Not set');
-console.log('GOOGLE_REDIRECT_URI:', process.env.GOOGLE_REDIRECT_URI ? 'Set' : 'Not set');
-console.log('CLIENT_DOMAIN:', process.env.CLIENT_DOMAIN ? 'Set' : 'Not set');
-console.log('COOKIE_DOMAIN:', process.env.COOKIE_DOMAIN ? 'Set' : 'Not set');
-console.log('NODE_ENV:', process.env.NODE_ENV || 'Not set');
-console.log('UPSTOX_API_KEY:', process.env.UPSTOX_API_KEY ? 'Set' : 'Not set');
-console.log('UPSTOX_REDIRECT_URL:', process.env.UPSTOX_REDIRECT_URL ? 'Set' : 'Not set');
-console.log('----------------------------------------');
+// H-5 FIX: Removed the full environment variable dump that printed on every
+// startup. Logging which variables are present is fine for development, but
+// sensitive variable names should not be enumerated in production logs.
+// Use a proper health-check endpoint (/api/ping) to verify server state.
+if (process.env.NODE_ENV !== 'production') {
+  const missing = ['DB', 'PRIVATE_KEY', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET',
+                   'GOOGLE_REDIRECT_URI', 'CLIENT_DOMAIN'].filter(
+    (k) => !process.env[k]
+  );
+  if (missing.length > 0) {
+    console.warn('⚠️  Missing environment variables:', missing.join(', '));
+  }
+}
 
 (async () => {
   try {
     await connectDB();
     await connectSocket(server);
-    
+
     // Start session monitoring and scheduled jobs
     startSessionMonitoring();
 
     server.listen(PORT, () => {
-      console.log(`server listening on ${PORT}`);
+      console.log(`Server listening on port ${PORT}`);
     });
   } catch (error) {
-    console.log(error);
+    console.error('Failed to start server:', error);
     process.exit(1);
   }
 })();

@@ -15,31 +15,32 @@ import {
 export const stockData = async (req: Request, res: Response) => {
   try {
     const symbol = req.params.symbol.toUpperCase();
-    // Get market status open / close
     const marketStatus = await getMarketStatus();
-    // Get data when market is open
+
+    // H-4 FIX: Explicitly handle the case where getMarketStatus() returns
+    // undefined (e.g., Alpha Vantage API failure). Previously, undefined was
+    // treated as "not closed", so the market appeared open when it wasn't.
+    if (!marketStatus) {
+      return res.status(503).json({
+        message: 'Market status unavailable. Please try again later.',
+      });
+    }
+
     const data: any = await fetchUpstoxData(symbol);
 
     if (marketStatus === 'closed') {
-      //  If the market was open and closed on time, show the data of that day.
       if (data?.data?.candles?.length > 0) {
         return res
           .status(200)
           .json({ data: data.data, type: 'closed_intraday', marketStatus });
-      }
-      // Else market didn't open due to holiday or weekday, show last 7 days data.
-      else {
-        // Calculate the date range for the last 7 days
+      } else {
         const today = new Date();
         const sevenDaysAgo = new Date(today);
-
-        // Subtract 7 days from today
         sevenDaysAgo.setDate(today.getDate() - 7);
 
         const fromDate = formatDate(sevenDaysAgo);
         const toDate = formatDate(today);
 
-        // Fetch historical data for the date range
         const historyData: any = await getLastMarketData({
           symbol,
           toDate,
@@ -66,6 +67,14 @@ export const stockData = async (req: Request, res: Response) => {
 export const HistoricalData = async (req: Request, res: Response) => {
   try {
     const marketStatus = await getMarketStatus();
+
+    // H-4 FIX: Handle undefined marketStatus
+    if (!marketStatus) {
+      return res.status(503).json({
+        message: 'Market status unavailable. Please try again later.',
+      });
+    }
+
     const day = req.params.day.slice(0, -1);
     const parsedDay = Number(day);
 
@@ -77,14 +86,11 @@ export const HistoricalData = async (req: Request, res: Response) => {
 
     const today = new Date();
     const daysAgo = new Date(today);
-
-    // Subtract user selected days from today
-    daysAgo.setDate(today.getDate() - Number(day));
+    daysAgo.setDate(today.getDate() - parsedDay);
 
     const fromDate = formatDate(daysAgo);
     const toDate = formatDate(today);
 
-    // Fetch the data for the date range
     const historyData: any = await getLastMarketData({
       symbol,
       toDate,
@@ -111,11 +117,9 @@ export const stockSearch = async (req: Request, res: Response) => {
 
   const uppercaseSymbol = (symbol as string).toUpperCase();
 
-  // Set the response to stream in chunks
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Transfer-Encoding', 'chunked');
-
-  // Using a Readable stream and the csv-parser library
+  // M-6 FIX: Removed incorrect Content-Type: text/csv and Transfer-Encoding:
+  // chunked headers. The actual response is JSON (sent via res.json()), and
+  // res.json() sets the correct Content-Type automatically.
   const stream = fs
     .createReadStream(path.join(__dirname, '..', 'util', 'NSE.csv'))
     .pipe(csv());
@@ -124,11 +128,9 @@ export const stockSearch = async (req: Request, res: Response) => {
 
   stream.on('data', (row: any) => {
     if (row.tradingsymbol.includes(uppercaseSymbol)) {
-      // Extract the main part of the symbol using regex
       const match = row.tradingsymbol.match(/^[A-Z]+/);
       if (match) {
         const mainSymbol = match[0];
-
         if (!symbolResults.has(mainSymbol)) {
           symbolResults.set(mainSymbol, row.name);
         }
@@ -136,7 +138,6 @@ export const stockSearch = async (req: Request, res: Response) => {
     }
   });
 
-  // When the stream ends, end the response.
   stream.on('end', () => {
     if (symbolResults.size === 0) {
       res.status(404).json({ message: 'No stocks found' });
@@ -146,9 +147,8 @@ export const stockSearch = async (req: Request, res: Response) => {
     }
   });
 
-  // Handle any errors from the stream
   stream.on('error', (error: any) => {
-    console.log('🚀 searchStock stream.error', error);
-    res.status(500).end();
+    console.error('stockSearch stream error:', error);
+    res.status(500).json({ message: 'Internal server error' });
   });
 };

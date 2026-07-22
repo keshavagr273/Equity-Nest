@@ -23,25 +23,25 @@ interface RequestBody {
   password: string;
 }
 
-interface User extends Request {
+interface UserRequest extends Request {
   user?: string;
 }
 //* ************** *************** *//
 
 // First time user validation (to check user Signined/loggedIn or not)
-export const validateLogin = async (req: User, res: Response) => {
+export const validateLogin = async (req: UserRequest, res: Response) => {
   try {
     if (req.user) {
       const user = await User.findById((req.user as any)._id);
       if (!user) {
         return res.status(401).json({ isSignedIn: false, message: 'User not found' });
       }
-      return res.status(200).json({ 
-        isSignedIn: true, 
+      return res.status(200).json({
+        isSignedIn: true,
         message: 'User is logged in.',
         _id: user._id,
         email: user.email,
-        name: user.name
+        name: user.name,
       });
     } else {
       return res.status(401).json({
@@ -50,7 +50,7 @@ export const validateLogin = async (req: User, res: Response) => {
       });
     }
   } catch (error) {
-    console.log('🚀 ValidateLogin error:', error);
+    console.error('ValidateLogin error:', error);
     return res.status(500).json({ message: 'Internal server error.' });
   }
 };
@@ -83,7 +83,7 @@ export const signin = [
       );
 
       // Track session start
-      const tokenExpiration = new Date(Date.now() + 12 * 60 * 60 * 1000); // 12 hours
+      const tokenExpiration = new Date(Date.now() + 12 * 60 * 60 * 1000);
       await SessionReliabilityTracker.createSession(
         user._id.toString(),
         sessionId,
@@ -100,15 +100,16 @@ export const signin = [
         secure: true,
       });
 
+      // H-1 FIX: Token is delivered exclusively via HttpOnly cookie.
+      // Removed `token` field from JSON body to prevent XSS-accessible localStorage storage.
       return res.status(200).json({
         message: 'Login Successful',
         isSignedIn: true,
         _id: user.id,
         email: user.email,
-        token: accessToken,
       });
     } catch (error) {
-      console.log('Error during signin', error);
+      console.error('Error during signin:', error);
       return res.status(500).json({ message: 'Internal Server Error' });
     }
   },
@@ -119,45 +120,39 @@ export const signup = [
   ...signupValidationRules(),
   validate,
   async (req: Request, res: Response) => {
-    const { fullname, email, password } = req.body;
-
-    let existingUser = await User.findOne({ email });
-    // console.log('🚀 existingUser:', existingUser);
-
-    if (existingUser) {
-      return res.status(422).json({ error: 'Email already in use' });
-    }
-
-    let hashedPassword = await bcrypt.hash(password, 12);
-
-    let newUser = new User({
-      name: fullname,
-      email: email,
-      password: hashedPassword,
-    });
-
+    // M-2 FIX: Wrapped the entire function body in a single try/catch.
+    // Previously, User.findOne() and bcrypt.hash() were outside the try block,
+    // meaning database failures would throw unhandled exceptions.
     try {
+      const { fullname, email, password } = req.body;
+
+      const existingUser = await User.findOne({ email });
+
+      if (existingUser) {
+        return res.status(422).json({ error: 'Email already in use' });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 12);
+
+      const newUser = new User({
+        name: fullname,
+        email: email,
+        password: hashedPassword,
+      });
+
       await newUser.save();
-    } catch (error) {
-      console.log('🚀 newUser error:', error);
-      return res
-        .status(422)
-        .json({ error: 'Could not create new user, Please try again' });
-    }
 
-    const { id, name, email: userEmail } = newUser;
+      const { id, name, email: userEmail } = newUser;
 
-    let accessToken;
-    try {
       const sessionId = randomBytes(16).toString('hex');
-      accessToken = jwt.sign(
+      const accessToken = jwt.sign(
         { _id: id, email: email, sessionId },
         process.env.PRIVATE_KEY as string,
         { expiresIn: '12h' }
       );
 
       // Track session start
-      const tokenExpiration = new Date(Date.now() + 12 * 60 * 60 * 1000); // 12 hours
+      const tokenExpiration = new Date(Date.now() + 12 * 60 * 60 * 1000);
       await SessionReliabilityTracker.createSession(
         id.toString(),
         sessionId,
@@ -165,50 +160,56 @@ export const signup = [
         req.ip,
         req.headers['user-agent']
       );
+
+      res.cookie('jwtoken', accessToken, {
+        maxAge: 43200000, // 12 hr
+        httpOnly: true,
+        path: '/',
+        sameSite: 'none',
+        secure: true,
+      });
+
+      // H-1 FIX: Token delivered via HttpOnly cookie only. Removed from JSON body.
+      return res.status(200).json({
+        message: 'Registration Successful',
+        isSignedIn: true,
+        _id: id,
+        name: name,
+        email: userEmail,
+      });
     } catch (error) {
-      console.log('🚀 signup error:', error);
+      console.error('Signup error:', error);
       return res.status(500).json({ message: 'Internal Server Error' });
     }
-
-    res.cookie('jwtoken', accessToken, {
-      maxAge: 43200000, // 12 hr
-      httpOnly: true,
-      path: '/',
-      sameSite: 'none',
-      secure: true,
-    });
-
-    return res.status(200).json({
-      message: 'Registration Successful',
-      _id: id,
-      name: name,
-      email: userEmail,
-      token: accessToken,
-    });
   },
 ];
 
 // Handle User Logout
 export const logout = async (req: any, res: Response) => {
   try {
-    // Get sessionId from JWT token
     const token = req.cookies.jwtoken || req.headers.authorization?.split(' ')[1];
-    
+
     if (token) {
       const decoded: any = jwt.verify(token, process.env.PRIVATE_KEY as string);
       if (decoded.sessionId) {
-        // Mark session as logged out
         await SessionReliabilityTracker.endSession(decoded.sessionId, 'logout');
       }
     }
   } catch (error) {
-    console.log('Error tracking logout:', error);
+    console.error('Error tracking logout:', error);
   }
 
-  res.clearCookie('jwtoken');
+  // Match cookie options from when it was set to ensure it clears correctly
+  res.clearCookie('jwtoken', {
+    httpOnly: true,
+    path: '/',
+    sameSite: 'none',
+    secure: true,
+  });
+
   return res
     .status(200)
-    .json({ isSignedIn: false, message: 'sign out successfully' });
+    .json({ isSignedIn: false, message: 'Sign out successfully' });
 };
 
 //* ************** UPSTOX AUTH *************** *//
@@ -217,21 +218,21 @@ export const loginUpstox = async (req: Request, res: Response) => {
   res.redirect(loginUrl);
 };
 
-// Callback after successful login
+// Callback after successful Upstox login
 export const redirectUpstox = async (req: Request, res: Response) => {
+  // H-2 FIX: Validate that `code` is a non-empty string before using it.
   const code = req.query.code;
-  // console.log('🚀 code:', code);
+  if (typeof code !== 'string' || !code.trim()) {
+    return res.status(400).json({ error: 'Authorization code is required' });
+  }
 
-  // Set up data to get accessToken
   const tokenData = {
-    code: code,
+    code,
     client_id: process.env.UPSTOX_API_KEY,
     client_secret: process.env.UPSTOX_API_SECRET,
     redirect_uri: process.env.UPSTOX_REDIRECT_URL,
     grant_type: 'authorization_code',
   };
-
-  // console.log('🚀 tokenData:', tokenData);
 
   try {
     const response = await axios.post(
@@ -246,15 +247,13 @@ export const redirectUpstox = async (req: Request, res: Response) => {
     );
 
     const accessToken = response.data.access_token;
-    // console.log('🚀 accessToken:', accessToken);
 
-    // Store this accessToken for subsequent requests
     setAccessToken(accessToken);
     defaultClient.authentications['OAUTH2'].accessToken = accessToken;
 
-    res.send('Authenticated successfully!');
+    res.json({ message: 'Authenticated with Upstox successfully' });
   } catch (error) {
-    console.error(error);
-    res.send('Error getting access token');
+    console.error('Upstox token exchange error:', error);
+    res.status(500).json({ error: 'Error getting Upstox access token' });
   }
 };

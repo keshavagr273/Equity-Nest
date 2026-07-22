@@ -17,11 +17,11 @@ const isAuthenticate = async (
   // Try to get token from Authorization header first, then from cookies
   const authHeader = req.headers.authorization;
   const cookieToken = req.cookies.jwtoken;
-  
+
   let token = null;
-  
+
   if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    token = authHeader.substring(7);
   } else if (cookieToken) {
     token = cookieToken;
   }
@@ -42,8 +42,6 @@ const isAuthenticate = async (
     req.user = decoded;
     next();
   } catch (error) {
-    console.log('🚀 isAuthenticate: Token verification failed:', error);
-    
     // Track failed session if it has sessionId
     try {
       const decoded: any = jwt.decode(token);
@@ -55,7 +53,7 @@ const isAuthenticate = async (
         );
       }
     } catch (trackError) {
-      console.log('Error tracking failed session:', trackError);
+      console.error('Error tracking failed session:', trackError);
     }
 
     if (error instanceof jwt.TokenExpiredError) {
@@ -64,7 +62,9 @@ const isAuthenticate = async (
         .json({ name: 'TokenExpiredError', message: 'jwt expired' });
     }
 
-    res.status(401).json({
+    // M-1 FIX: Added missing `return` to prevent "Cannot set headers after they
+    // are sent" errors if the code path below this ever changes.
+    return res.status(401).json({
       message: 'Unauthorized: token invalid',
     });
   }

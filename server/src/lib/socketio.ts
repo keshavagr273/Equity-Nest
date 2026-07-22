@@ -4,6 +4,7 @@ import protobuf from 'protobufjs';
 import schedule from 'node-schedule';
 // @ts-ignore
 import * as UpstoxClient from 'upstox-js-sdk';
+// C-3 FIX: Import from the new TypeScript tokenStore
 import { getAccessToken } from '../util/tokenStore';
 import fetchInstrumentDetails from '../util/fetchInstrumentDetails';
 import { getMarketStatus } from '../util/fetchStockData';
@@ -12,14 +13,21 @@ import { getMarketStatus } from '../util/fetchStockData';
 let protobufRoot: any = null;
 let defaultClient = UpstoxClient.ApiClient.instance;
 let apiVersion = '2.0';
-let OAUTH2 = defaultClient.authentications['OAUTH2'];
 
-const upstoxToken = getAccessToken();
-OAUTH2.accessToken = upstoxToken || process.env.UPSTOX_ACCESS_TOKEN;
+// C-3 FIX: Do NOT read the token at module load time (it is always null on cold
+// start because no user has authenticated yet). Instead, read it lazily right
+// before each WebSocket connection is opened.
+const getUpstoxAuth = () => {
+  return getAccessToken() || (process.env.UPSTOX_ACCESS_TOKEN as string);
+};
 
 // Function to authorize the market data feed
 const getMarketFeedUrl = async () => {
   return new Promise((resolve, reject) => {
+    // C-3 FIX: Refresh the OAuth token on every call
+    const OAUTH2 = defaultClient.authentications['OAUTH2'];
+    OAUTH2.accessToken = getUpstoxAuth();
+
     let apiInstance = new UpstoxClient.WebsocketApi();
 
     apiInstance.getMarketDataFeedAuthorize(
@@ -27,8 +35,8 @@ const getMarketFeedUrl = async () => {
       // @ts-ignore
       (error, data, response) => {
         if (error) {
-          console.log('🚀 Upstox user', error.response.res.statusMessage);
-          reject(error.response.res.statusMessage);
+          console.error('Upstox auth error:', error?.response?.res?.statusMessage ?? error);
+          reject(error?.response?.res?.statusMessage ?? error);
         } else {
           resolve(data.data.authorizedRedirectUri);
         }
@@ -39,25 +47,28 @@ const getMarketFeedUrl = async () => {
 
 const connectWebSocket = async (wsUrl: any) => {
   return new Promise((resolve, reject) => {
+    // C-3 FIX: Use fresh token for each WebSocket connection
+    const token = getUpstoxAuth();
+
     const ws = new WebSocket(wsUrl, {
       headers: {
         'Api-Version': apiVersion,
-        Authorization: 'Bearer ' + OAUTH2.accessToken,
+        Authorization: 'Bearer ' + token,
       },
       followRedirects: true,
     });
 
     ws.on('open', () => {
-      console.log('🚀 ws connected');
+      console.log('ws connected');
       resolve(ws);
     });
 
     ws.on('close', () => {
-      console.log('🚀 ws disconnected');
+      console.log('ws disconnected');
     });
 
     ws.on('error', (error: any) => {
-      console.log('🚀 ws error:', error);
+      console.error('ws error:', error);
       reject(error);
     });
   });
@@ -65,12 +76,12 @@ const connectWebSocket = async (wsUrl: any) => {
 
 const initProtobuf = async () => {
   protobufRoot = await protobuf.load(__dirname + '/MarketDataFeed.proto');
-  console.log('🚀 Protobuf part initialization complete');
+  console.log('Protobuf initialization complete');
 };
 
 const decodeProfobuf = (buffer: any) => {
   if (!protobufRoot) {
-    console.warn('Protobuf part not initialized yet!');
+    console.warn('Protobuf not initialized yet!');
     return null;
   }
 
@@ -81,6 +92,19 @@ const decodeProfobuf = (buffer: any) => {
 };
 
 initProtobuf();
+
+// H-3 FIX: Schedule market-status broadcast jobs ONCE at the server level using
+// io.emit(), instead of creating two new jobs per socket connection. Previously,
+// 1000 concurrent clients would create 2000 scheduled jobs all firing at once.
+const setupMarketStatusJobs = (io: Server) => {
+  schedule.scheduleJob({ hour: 9, minute: 15, tz: 'Asia/Kolkata' }, async () => {
+    io.emit('marketStatusChange', await getMarketStatus());
+  });
+
+  schedule.scheduleJob({ hour: 15, minute: 30, tz: 'Asia/Kolkata' }, async () => {
+    io.emit('marketStatusChange', await getMarketStatus());
+  });
+};
 
 const connectSocket = async (app: any) => {
   const io = new Server(app, {
@@ -97,39 +121,21 @@ const connectSocket = async (app: any) => {
     },
   });
 
+  // H-3 FIX: Create market jobs once, not once per connection
+  setupMarketStatusJobs(io);
+
   const socketToWsMap = new Map();
 
   io.on('connection', (socket: any) => {
     let ws: any;
 
-    // Schedule market status updates
-    const openJob = schedule.scheduleJob(
-      { hour: 9, minute: 15, tz: 'Asia/Kolkata' },
-      async () => {
-        socket.emit('marketStatusChange', await getMarketStatus());
-      }
-    );
-
-    const closeJob = schedule.scheduleJob(
-      { hour: 15, minute: 30, tz: 'Asia/Kolkata' },
-      async () => {
-        // Emit the market status to the connected client
-        socket.emit('marketStatusChange', await getMarketStatus());
-      }
-    );
-
     socket.on('selectSymbol', async (symbol: string) => {
-      // console.log('socket requested data for:', symbol);
-
       if (!socketToWsMap.has(socket.id)) {
         socketToWsMap.set(socket.id, ws);
 
         const instrument = await fetchInstrumentDetails(symbol);
         if (!instrument) {
-          const errorMsg = 'No instrument found for the given symbol.';
-
-          // Emit error message to the client
-          socket.emit('error', errorMsg);
+          socket.emit('error', 'No instrument found for the given symbol.');
           return;
         }
 
@@ -152,26 +158,19 @@ const connectSocket = async (app: any) => {
 
           ws.send(Buffer.from(JSON.stringify(data)));
 
-          // Handle WebSocket messages
           const messageHandler = (data: any) => {
             const decodedData = decodeProfobuf(data);
-            // console.log('🚀 decodedData:', decodedData);
             socket.emit('symbolData', decodedData);
           };
           ws.on('message', messageHandler);
 
-          // Handle WebSocket errors
           const errorHandler = (err: Error) => {
             console.error('WebSocket Error:', err);
             socket.emit('error', 'WebSocket encountered an error.');
           };
           ws.on('error', errorHandler);
 
-          // Handle WebSocket close events
-          const closeHandler = (code: number, reason: string) => {
-            // console.log(
-            //   `🚀 WebSocket closed. Code: ${code}, Reason: ${reason}`
-            // );
+          const closeHandler = () => {
             ws.close();
             ws.removeListener('message', messageHandler);
             ws.removeListener('error', errorHandler);
@@ -183,36 +182,20 @@ const connectSocket = async (app: any) => {
           socket.emit('error', 'Error retrieving data for the given symbol.');
         }
       } else {
-        // console.log(`WebSocket already exists for client ${socket.id}`);
         return;
       }
     });
 
     // Handle socket.io disconnect and close the associated WebSocket
-    socket.on('disconnect', (reason: string) => {
-      // console.log(`Socket.io client disconnected. Reason: ${reason}`);
-      openJob.cancel();
-      closeJob.cancel();
-
-      // Fetch the WebSocket instance associated with this socket.io socket
+    socket.on('disconnect', () => {
       const clientWs = socketToWsMap.get(socket.id);
 
-      // If the WebSocket exists and it's open, close it.
       if (clientWs && clientWs.readyState === clientWs.OPEN) {
-        // console.log('Closing WebSocket...');
         clientWs.close();
         clientWs.removeAllListeners();
-        // console.log('Associated WebSocket closed.');
       }
 
       socketToWsMap.delete(socket.id);
-
-      if (socketToWsMap.has(socket.id)) {
-        console.log(`Error: WebSocket still exists for client ${socket.id}`);
-      } else {
-        // console.log(`WebSocket removed for client ${socket.id}`);
-        return;
-      }
     });
   });
 };
